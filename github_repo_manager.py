@@ -483,7 +483,7 @@ class RustDeskManager:
             # 切换到远程默认分支
             subprocess.run(["git", "checkout", "-B", remote_branch], cwd=self.rustdesk_dir, check=True, capture_output=True)
         else:
-            # 新仓库不存在，初始化新仓库
+            # 新仓库不存在，直接用 master
             remote_branch = "master"
             subprocess.run(["git", "init"], cwd=self.rustdesk_dir, check=True, capture_output=True)
             subprocess.run(["git", "remote", "add", "origin", target_repo_url], cwd=self.rustdesk_dir, check=True, capture_output=True)
@@ -601,7 +601,7 @@ def main():
                 name=new_repo_name,
                 description="由 GitHub Actions 创建的 RustDesk 修改版仓库",
                 private=False,
-                auto_init=True,
+                auto_init=False,
                 default_branch="master",
             )
 
