@@ -426,10 +426,13 @@ class RustDeskManager:
             with open(dialog_path, 'w', encoding='utf-8') as f:
                 f.write(content)
 
-        # 只删除.gitignore
-        gitignore_path = os.path.join(self.rustdesk_dir, ".gitignore")
-        if os.path.exists(gitignore_path):
-            os.remove(gitignore_path)
+        # 只删除.gitignore（包括子目录）
+        for root, dirs, files in os.walk(self.rustdesk_dir):
+            if '.git' in dirs:
+                dirs.remove('.git')
+            for file in files:
+                if file == '.gitignore':
+                    os.remove(os.path.join(root, file))
 
     def push_to_new_repo(self, target_repo_url: str, repo_exists: bool = False):
         """推送到新仓库"""
@@ -499,6 +502,8 @@ class RustDeskManager:
             capture_output=True,
             text=True
         )
+        print(f"[+] Git status:\n{result.stdout[:2000]}")
+        
         if not result.stdout.strip():
             print("[!] 没有文件需要提交，跳过 commit")
             return
@@ -509,8 +514,11 @@ class RustDeskManager:
             check=True,
             capture_output=True
         )
-        subprocess.run(["git", "push", "-u", "origin", remote_branch], cwd=self.rustdesk_dir, check=True, capture_output=True)
-        print("[+] 代码已推送到新仓库")
+        result = subprocess.run(["git", "push", "-u", "origin", remote_branch], cwd=self.rustdesk_dir, capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"[!] Push 失败: {result.stderr}")
+        else:
+            print("[+] 代码已推送到新仓库")
 
     def _sed_replace(self, directory: str, old_str: str, new_str: str):
         """在目录中所有文件替换字符串"""
