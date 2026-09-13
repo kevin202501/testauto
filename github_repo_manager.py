@@ -435,71 +435,73 @@ class RustDeskManager:
                     os.remove(os.path.join(root, file))
 
     def push_to_new_repo(self, target_repo_url: str, repo_exists: bool = False):
-        """推送到新仓库"""
+        """推送到新仓库 - 不携带原始仓库的 commit"""
         print("[+] 推送到新仓库...")
 
         # 配置git用户信息
         subprocess.run(["git", "config", "user.email", "action@github.com"], cwd=self.rustdesk_dir, check=True, capture_output=True)
         subprocess.run(["git", "config", "user.name", "GitHub Action"], cwd=self.rustdesk_dir, check=True, capture_output=True)
 
-        if repo_exists:
-            # 新仓库已存在，先克隆新仓库
-            print("[+] 克隆新仓库...")
-            temp_dir = self.rustdesk_dir + "_temp"
-            if os.path.exists(temp_dir):
-                shutil.rmtree(temp_dir)
-            
-            # 克隆新仓库到临时目录
-            subprocess.run(["git", "clone", target_repo_url, temp_dir], check=True, capture_output=True)
-            
-            # 获取远程仓库的默认分支
-            result = subprocess.run(
-                ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
-                cwd=temp_dir,
-                capture_output=True,
-                text=True
-            )
-            if result.returncode == 0:
-                remote_branch = result.stdout.strip().replace("refs/remotes/origin/", "")
-            else:
-                remote_branch = "main"
-            print(f"[+] 远程仓库默认分支: {remote_branch}")
-            
-            # 清空rustdesk_dir的.git目录
-            git_dir = os.path.join(self.rustdesk_dir, ".git")
-            if os.path.exists(git_dir):
-                shutil.rmtree(git_dir)
-            
-            # 将新仓库的.git目录复制到rustdesk_dir
-            shutil.copytree(
-                os.path.join(temp_dir, ".git"),
-                git_dir
-            )
-            
-            # 清理临时目录
-            shutil.rmtree(temp_dir)
-            
-            # 配置remote
-            subprocess.run(["git", "remote", "remove", "origin"], cwd=self.rustdesk_dir, check=False, capture_output=True)
-            subprocess.run(["git", "remote", "add", "origin", target_repo_url], cwd=self.rustdesk_dir, check=True, capture_output=True)
-            
-            # 切换到远程默认分支
-            subprocess.run(["git", "checkout", "-B", remote_branch], cwd=self.rustdesk_dir, check=True, capture_output=True)
-        else:
-            # 新仓库不存在，直接用 master
-            remote_branch = "master"
-            subprocess.run(["git", "init"], cwd=self.rustdesk_dir, check=True, capture_output=True)
-            subprocess.run(["git", "remote", "remove", "origin"], cwd=self.rustdesk_dir, check=False, capture_output=True)
-            subprocess.run(["git", "remote", "add", "origin", target_repo_url], cwd=self.rustdesk_dir, check=True, capture_output=True)
-            subprocess.run(["git", "checkout", "-B", remote_branch], cwd=self.rustdesk_dir, check=True, capture_output=True)
+        # 先删除 rustdesk 的 .git 目录，只保留文件
+        git_dir = os.path.join(self.rustdesk_dir, ".git")
+        if os.path.exists(git_dir):
+            shutil.rmtree(git_dir)
 
+        # 克隆新仓库到临时目录
+        merge_dir = self.work_dir + "/rustdesktest"
+        if os.path.exists(merge_dir):
+            shutil.rmtree(merge_dir)
+        
+        print("[+] 克隆新仓库...")
+        subprocess.run(["git", "clone", target_repo_url, merge_dir], check=True, capture_output=True)
+        
+        # 获取远程仓库的默认分支
+        result = subprocess.run(
+            ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
+            cwd=merge_dir,
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0:
+            remote_branch = result.stdout.strip().replace("refs/remotes/origin/", "")
+        else:
+            remote_branch = "master" if not repo_exists else "main"
+        print(f"[+] 远程仓库默认分支: {remote_branch}")
+        
+        # 配置 git 用户信息
+        subprocess.run(["git", "config", "user.email", "action@github.com"], cwd=merge_dir, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "GitHub Action"], cwd=merge_dir, check=True, capture_output=True)
+        
+        # 切换到目标分支
+        subprocess.run(["git", "checkout", "-B", remote_branch], cwd=merge_dir, check=True, capture_output=True)
+        
+        # 清空仓库内容（保留 .git）
+        for item in os.listdir(merge_dir):
+            if item == '.git':
+                continue
+            item_path = os.path.join(merge_dir, item)
+            if os.path.isdir(item_path):
+                shutil.rmtree(item_path)
+            else:
+                os.remove(item_path)
+        
+        # 复制修改后的 rustdesk 文件到新仓库
+        print("[+] 复制修改后的文件...")
+        for item in os.listdir(self.rustdesk_dir):
+            src_path = os.path.join(self.rustdesk_dir, item)
+            dst_path = os.path.join(merge_dir, item)
+            if os.path.isdir(src_path):
+                shutil.copytree(src_path, dst_path)
+            else:
+                shutil.copy2(src_path, dst_path)
+        
         # 添加所有文件
-        subprocess.run(["git", "add", "."], cwd=self.rustdesk_dir, check=True, capture_output=True)
+        subprocess.run(["git", "add", "."], cwd=merge_dir, check=True, capture_output=True)
         
         # 检查是否有文件需要提交
         result = subprocess.run(
             ["git", "status", "--porcelain"],
-            cwd=self.rustdesk_dir,
+            cwd=merge_dir,
             capture_output=True,
             text=True
         )
@@ -511,15 +513,18 @@ class RustDeskManager:
         
         subprocess.run(
             ["git", "commit", "-m", "Update rustdesk configuration"],
-            cwd=self.rustdesk_dir,
+            cwd=merge_dir,
             check=True,
             capture_output=True
         )
-        result = subprocess.run(["git", "push", "-u", "origin", remote_branch], cwd=self.rustdesk_dir, capture_output=True, text=True)
+        result = subprocess.run(["git", "push", "-u", "origin", remote_branch], cwd=merge_dir, capture_output=True, text=True)
         if result.returncode != 0:
             print(f"[!] Push 失败: {result.stderr}")
         else:
             print("[+] 代码已推送到新仓库")
+        
+        # 清理临时目录
+        shutil.rmtree(merge_dir)
 
     def _sed_replace(self, directory: str, old_str: str, new_str: str):
         """在目录中所有文件替换字符串"""
