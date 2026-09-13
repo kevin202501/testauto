@@ -1,0 +1,44 @@
+name: Create RustDesk Repo
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-repo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Create repo and configure
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_GITHUB_TOKEN: ${{ secrets.NEW_GITHUB_TOKEN }}
+          REPO_OWNER: ${{ secrets.REPO_OWNER }}
+          NEWREPO: ${{ secrets.NEWREPO }}
+          CURRENT_REPO: ${{ github.repository }}
+          RENDEZVOUS_SERVERS: ${{ secrets.RENDEZVOUS_SERVERS }}
+          PUBLIC_RS_PUB_KEY: ${{ secrets.PUBLIC_RS_PUB_KEY }}
+          HARD_SETTINGS: ${{ secrets.HARD_SETTINGS }}
+          API_SERVER: ${{ secrets.API_SERVER }}
+          ADMIN_SERVER: ${{ secrets.ADMIN_SERVER }}
+          PORT21114: ${{ secrets.PORT21114 }}
+          PORT21115: ${{ secrets.PORT21115 }}
+          PORT21116: ${{ secrets.PORT21116 }}
+          PORT21117: ${{ secrets.PORT21117 }}
+          PORT21118: ${{ secrets.PORT21118 }}
+          PORT21119: ${{ secrets.PORT21119 }}
+        run: python github_repo_manager.py
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf src/
