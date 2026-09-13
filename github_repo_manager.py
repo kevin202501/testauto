@@ -617,15 +617,35 @@ def main():
             print("\n[=] 步骤3: 设置 Workflow permissions")
             manager.set_workflow_permissions(repo_owner, new_repo_name, permission="write")
 
+            # 等待新仓库完全就绪
+            import time
+            print("[+] 等待新仓库就绪...")
+            time.sleep(5)
+
             # 4. 从当前仓库获取secrets并配置到新仓库
             print("\n[=] 步骤4: 从当前仓库复制 Repository secrets 到新仓库")
             current_secrets = manager.list_secrets(current_owner, current_repo_name)
+            # 过滤不需要复制的secrets
+            skip_secrets = {"GITHUB_TOKEN", "NEW_GITHUB_TOKEN", "REPO_OWNER"}
             for secret in current_secrets:
                 secret_name = secret["name"]
+                if secret_name in skip_secrets:
+                    print(f"    跳过 secret: {secret_name}")
+                    continue
                 secret_value = manager.get_secret(current_owner, current_repo_name, secret_name)
                 if secret_value:
-                    manager.create_or_update_secret(repo_owner, new_repo_name, secret_name, secret_value)
-                    print(f"    复制 secret: {secret_name}")
+                    # 添加重试机制
+                    for attempt in range(3):
+                        try:
+                            manager.create_or_update_secret(repo_owner, new_repo_name, secret_name, secret_value)
+                            print(f"    复制 secret: {secret_name}")
+                            break
+                        except Exception as e:
+                            if attempt < 2:
+                                print(f"    复制 secret {secret_name} 失败，重试中...")
+                                time.sleep(3)
+                            else:
+                                print(f"    复制 secret {secret_name} 失败: {e}")
 
             # 验证
             print("\n[=] 当前新仓库 secrets:")
