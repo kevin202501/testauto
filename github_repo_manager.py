@@ -491,7 +491,7 @@ class RustDeskManager:
             subprocess.run(["git", "init"], cwd=self.rustdesk_dir, check=True, capture_output=True)
             subprocess.run(["git", "remote", "remove", "origin"], cwd=self.rustdesk_dir, check=False, capture_output=True)
             subprocess.run(["git", "remote", "add", "origin", target_repo_url], cwd=self.rustdesk_dir, check=True, capture_output=True)
-            subprocess.run(["git", "checkout", "-b", remote_branch], cwd=self.rustdesk_dir, check=True, capture_output=True)
+            subprocess.run(["git", "checkout", "-B", remote_branch], cwd=self.rustdesk_dir, check=True, capture_output=True)
 
         # 添加所有文件
         subprocess.run(["git", "add", "."], cwd=self.rustdesk_dir, check=True, capture_output=True)
