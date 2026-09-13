@@ -449,6 +449,19 @@ class RustDeskManager:
             # 克隆新仓库到临时目录
             subprocess.run(["git", "clone", target_repo_url, temp_dir], check=True, capture_output=True)
             
+            # 获取远程仓库的默认分支
+            result = subprocess.run(
+                ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
+                cwd=temp_dir,
+                capture_output=True,
+                text=True
+            )
+            if result.returncode == 0:
+                remote_branch = result.stdout.strip().replace("refs/remotes/origin/", "")
+            else:
+                remote_branch = "main"
+            print(f"[+] 远程仓库默认分支: {remote_branch}")
+            
             # 清空rustdesk_dir的.git目录
             git_dir = os.path.join(self.rustdesk_dir, ".git")
             if os.path.exists(git_dir):
@@ -467,13 +480,14 @@ class RustDeskManager:
             subprocess.run(["git", "remote", "remove", "origin"], cwd=self.rustdesk_dir, check=False, capture_output=True)
             subprocess.run(["git", "remote", "add", "origin", target_repo_url], cwd=self.rustdesk_dir, check=True, capture_output=True)
             
-            # 切换到master分支
-            subprocess.run(["git", "checkout", "-B", "master"], cwd=self.rustdesk_dir, check=True, capture_output=True)
+            # 切换到远程默认分支
+            subprocess.run(["git", "checkout", "-B", remote_branch], cwd=self.rustdesk_dir, check=True, capture_output=True)
         else:
             # 新仓库不存在，初始化新仓库
+            remote_branch = "master"
             subprocess.run(["git", "init"], cwd=self.rustdesk_dir, check=True, capture_output=True)
             subprocess.run(["git", "remote", "add", "origin", target_repo_url], cwd=self.rustdesk_dir, check=True, capture_output=True)
-            subprocess.run(["git", "checkout", "-b", "master"], cwd=self.rustdesk_dir, check=True, capture_output=True)
+            subprocess.run(["git", "checkout", "-b", remote_branch], cwd=self.rustdesk_dir, check=True, capture_output=True)
 
         # 添加所有文件
         subprocess.run(["git", "add", "."], cwd=self.rustdesk_dir, check=True, capture_output=True)
@@ -495,7 +509,7 @@ class RustDeskManager:
             check=True,
             capture_output=True
         )
-        subprocess.run(["git", "push", "-u", "origin", "master"], cwd=self.rustdesk_dir, check=True, capture_output=True)
+        subprocess.run(["git", "push", "-u", "origin", remote_branch], cwd=self.rustdesk_dir, check=True, capture_output=True)
         print("[+] 代码已推送到新仓库")
 
     def _sed_replace(self, directory: str, old_str: str, new_str: str):
@@ -588,6 +602,7 @@ def main():
                 description="由 GitHub Actions 创建的 RustDesk 修改版仓库",
                 private=False,
                 auto_init=True,
+                default_branch="master",
             )
 
             # 3. 设置 Workflow permissions 为 Read and write permissions
