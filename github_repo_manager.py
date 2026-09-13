@@ -489,6 +489,7 @@ class RustDeskManager:
             # 新仓库不存在，直接用 master
             remote_branch = "master"
             subprocess.run(["git", "init"], cwd=self.rustdesk_dir, check=True, capture_output=True)
+            subprocess.run(["git", "remote", "remove", "origin"], cwd=self.rustdesk_dir, check=False, capture_output=True)
             subprocess.run(["git", "remote", "add", "origin", target_repo_url], cwd=self.rustdesk_dir, check=True, capture_output=True)
             subprocess.run(["git", "checkout", "-b", remote_branch], cwd=self.rustdesk_dir, check=True, capture_output=True)
 
