@@ -680,8 +680,23 @@ def main():
         rustdesk_manager.clean_work_dir()
         rustdesk_manager.clone_repos()
 
-        # 获取commit id
-        main_commit_id, sub_commit_id = rustdesk_manager.get_commit_ids("1.4.9")
+        # 获取输入参数
+        tag_id = os.environ.get("TAG_ID", "").strip()
+        main_commit_id_input = os.environ.get("MAIN_COMMIT_ID", "").strip()
+        sub_commit_id_input = os.environ.get("SUB_COMMIT_ID", "").strip()
+
+        if tag_id:
+            # 从 tag_id 获取 commit ids
+            main_commit_id, sub_commit_id = rustdesk_manager.get_commit_ids(tag_id)
+        elif main_commit_id_input and sub_commit_id_input:
+            # 使用提供的 commit ids
+            main_commit_id = main_commit_id_input
+            sub_commit_id = sub_commit_id_input
+            print(f"[+] 使用提供的 Main Commit ID: {main_commit_id}")
+            print(f"[+] 使用提供的 SUB Commit ID: {sub_commit_id}")
+        else:
+            # 使用最新提交（HEAD）
+            main_commit_id, sub_commit_id = rustdesk_manager.get_commit_ids("HEAD")
 
         # 修改hbb_common
         rustdesk_manager.modify_hbb_common(sub_commit_id, secrets)
