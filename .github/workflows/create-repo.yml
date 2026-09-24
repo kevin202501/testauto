@@ -2,6 +2,19 @@ name: Create RustDesk Repo
 
 on:
   workflow_dispatch:
+    inputs:
+      tag_id:
+        description: 'RustDesk tag (e.g., 1.4.9). If provided, main_commit_id and sub_commit_id will be derived from this tag.'
+        required: false
+        default: ''
+      main_commit_id:
+        description: 'Main repository commit ID. Used only if tag_id is empty.'
+        required: false
+        default: ''
+      sub_commit_id:
+        description: 'Submodule (hbb_common) commit ID. Used only if tag_id is empty.'
+        required: false
+        default: ''
 
 jobs:
   create-repo:
@@ -37,6 +50,9 @@ jobs:
           PORT21117: ${{ secrets.PORT21117 }}
           PORT21118: ${{ secrets.PORT21118 }}
           PORT21119: ${{ secrets.PORT21119 }}
+          TAG_ID: ${{ github.event.inputs.tag_id }}
+          MAIN_COMMIT_ID: ${{ github.event.inputs.main_commit_id }}
+          SUB_COMMIT_ID: ${{ github.event.inputs.sub_commit_id }}
         run: python github_repo_manager.py
 
       - name: Cleanup
