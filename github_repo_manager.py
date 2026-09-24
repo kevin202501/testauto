@@ -219,46 +219,51 @@ class RustDeskManager:
         }
 
         for old_port, new_port in replacements.items():
-            self._sed_replace(self.hbb_common_dir, old_port, new_port)
+            if new_port:
+                self._sed_replace(self.hbb_common_dir, old_port, new_port)
 
         # 修改RENDEZVOUS_SERVERS
-        self._sed_replace_config(
-            self.hbb_common_dir,
-            r'pub const RENDEZVOUS_SERVERS: &\[&str\] = &\[".*?"\];',
-            f'pub const RENDEZVOUS_SERVERS: &[&str] = &["{rendezvous_servers}"];'
-        )
+        if rendezvous_servers:
+            self._sed_replace_config(
+                self.hbb_common_dir,
+                r'pub const RENDEZVOUS_SERVERS: &\[&str\] = &\[".*?"\];',
+                f'pub const RENDEZVOUS_SERVERS: &[&str] = &["{rendezvous_servers}"];'
+            )
 
         # 修改PUBLIC_RS_PUB_KEY或RS_PUB_KEY
-        config_rs_path = os.path.join(self.hbb_common_dir, "src", "config.rs")
-        if os.path.exists(config_rs_path):
-            with open(config_rs_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            if "pub const PUBLIC_RS_PUB_KEY" in content:
-                self._sed_replace_config(
-                    self.hbb_common_dir,
-                    r'pub const PUBLIC_RS_PUB_KEY: &str = ".*?";',
-                    f'pub const PUBLIC_RS_PUB_KEY: &str = "{public_rs_pub_key}";'
-                )
-            else:
-                self._sed_replace_config(
-                    self.hbb_common_dir,
-                    r'pub const RS_PUB_KEY: &str = ".*?";',
-                    f'pub const RS_PUB_KEY: &str = "{public_rs_pub_key}";'
-                )
+        if public_rs_pub_key:
+            config_rs_path = os.path.join(self.hbb_common_dir, "src", "config.rs")
+            if os.path.exists(config_rs_path):
+                with open(config_rs_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                if "pub const PUBLIC_RS_PUB_KEY" in content:
+                    self._sed_replace_config(
+                        self.hbb_common_dir,
+                        r'pub const PUBLIC_RS_PUB_KEY: &str = ".*?";',
+                        f'pub const PUBLIC_RS_PUB_KEY: &str = "{public_rs_pub_key}";'
+                    )
+                else:
+                    self._sed_replace_config(
+                        self.hbb_common_dir,
+                        r'pub const RS_PUB_KEY: &str = ".*?";',
+                        f'pub const RS_PUB_KEY: &str = "{public_rs_pub_key}";'
+                    )
 
         # 修改HARD_SETTINGS
-        self._sed_replace_config(
-            self.hbb_common_dir,
-            r'pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = RwLock::new\(\{let mut m = HashMap::new\(\);m\.insert\("password"\.to_owned\(\), ".*?"\.to_owned\(\)\);m\}\);',
-            f'pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = RwLock::new({{let mut m = HashMap::new();m.insert("password".to_owned(), "{hard_settings}".to_owned());m}});'
-        )
+        if hard_settings:
+            self._sed_replace_config(
+                self.hbb_common_dir,
+                r'pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = RwLock::new\(\{let mut m = HashMap::new\(\);m\.insert\("password"\.to_owned\(\), ".*?"\.to_owned\(\)\);m\}\);',
+                f'pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = RwLock::new({{let mut m = HashMap::new();m.insert("password".to_owned(), "{hard_settings}".to_owned());m}});'
+            )
 
         # 修改API_SERVER
-        self._sed_replace(
-            self.hbb_common_dir,
-            "https://api.rustdesk.com/version/latest",
-            f"http://{api_server}/version/latest"
-        )
+        if api_server:
+            self._sed_replace(
+                self.hbb_common_dir,
+                "https://api.rustdesk.com/version/latest",
+                f"http://{api_server}/version/latest"
+            )
 
         # 修改config.rs中的其他配置
         config_rs_path = os.path.join(self.hbb_common_dir, "src", "config.rs")
@@ -367,7 +372,8 @@ class RustDeskManager:
         }
 
         for old_port, new_port in port_mapping.items():
-            self._sed_replace(self.rustdesk_dir, old_port, new_port)
+            if new_port:
+                self._sed_replace(self.rustdesk_dir, old_port, new_port)
 
         # 修改其他配置
         self._sed_replace(
@@ -377,11 +383,12 @@ class RustDeskManager:
         )
 
         # 修改admin server
-        self._sed_replace_config(
-            self.rustdesk_dir,
-            r'"https://admin.rustdesk.com".to_owned()',
-            f'"http://{admin_server}".to_owned()'
-        )
+        if admin_server:
+            self._sed_replace_config(
+                self.rustdesk_dir,
+                r'"https://admin.rustdesk.com".to_owned()',
+                f'"http://{admin_server}".to_owned()'
+            )
 
         # 修改flutter-ci.yml
         flutter_ci_path = os.path.join(self.rustdesk_dir, ".github", "workflows", "flutter-ci.yml")
